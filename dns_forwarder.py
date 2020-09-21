@@ -19,7 +19,8 @@ def sendUDP(ip,query):
     data = sock.recv(1024)
     return data
 
-def handler(data, address,socket,ip):
+
+def handler(data, address,socket,ip,deny_list):
     print('Request from client: ',data.encode('hex'),address)
     print('')
 
@@ -33,6 +34,7 @@ def handler(data, address,socket,ip):
     # send back to client
     socket.sendto(UDPres,address)
 
+
 if __name__ == 'main':
 
     # Set up argument parsing automation
@@ -45,7 +47,7 @@ if __name__ == 'main':
     parser.add_argument('-d', '--DST_IP', type=str, default=None, required=False,  help='DNS Server IP address')
     parser.add_argument('-f', '--DENY_LIST_FILE', type=str, default=None, required=True, help='List of domains to block')
     parser.add_argument('-l', '--LOG_FILE', type=str, default=None, help='Append-only log file')
-    parser.add_argument('--doh', '--DOH', default='8.8.8.8', help='Use default DoH Server')
+    parser.add_argument('--doh', '--DOH', help='Use default DoH Server', action='store_true')
     parser.add_argument('--doh_server', '--DOH_SERVER', type=str, default=None, help='DoH Server IP address')
 
     # Parse the given args
@@ -62,7 +64,33 @@ if __name__ == 'main':
         else:
             blocked_domains.append(nextl)
 
-    if args.DST_IP is not None:
+    if args.DOH_SERVER is not None:
+        # DoH-capable Server IP provided --> send query to this DoH Server
+        doh_ip = args.DOH_SERVER
+        try:
+            # UDP DNS query setup
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.bind((doh_ip, PORT))
+            while True:
+                data, address = sock.recvfrom(1024)
+                _thread.start_new_thread(handler(data, address, sock, doh_ip,blocked_domains))
+        except Exception as e:
+            print(e)
+            sock.close()
+    elif args.DOH:
+        # DoH-capable server specified but not provided --> send to default DoH Server
+        doh_ip = '8.8.8.8'
+        try:
+            # UDP DNS query setup
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.bind((doh_ip, PORT))
+            while True:
+                data, address = sock.recvfrom(1024)
+                _thread.start_new_thread(handler(data, address, sock, doh_ip, blocked_domains))
+        except Exception as e:
+            print(e)
+            sock.close()
+    elif args.DST_IP is not None:
         # DNS Server IP provided --> send query to this server
         dns_ip = args.DST_IP
         try:
@@ -71,23 +99,25 @@ if __name__ == 'main':
             sock.bind((dns_ip,PORT))
             while True:
                 data, address = sock.recvfrom(1024)
-                _thread.start_new_thread(handler(data, address, sock, dns_ip))
+                _thread.start_new_thread(handler(data, address, sock, dns_ip, blocked_domains))
         except Exception as e:
             print(e)
             sock.close()
-    elif args.DOH_SERVER is not None:
-        # DoH-capable Server IP provided --> send query to this DoH Server
-        doh_ip = args.DOH_SERVER
+    else:
+        # No DoH-capable or DNS Server specified --> send query to default DNS Server
+        dns_ip = '8.8.8.8'
         try:
             # UDP DNS query setup
-            sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-            sock.bind((doh_ip,PORT))
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.bind((dns_ip, PORT))
             while True:
                 data, address = sock.recvfrom(1024)
-                _thread.start_new_thread(handler(data, address, sock, doh_ip))
+                _thread.start_new_thread(handler(data, address, sock, dns_ip, blocked_domains))
         except Exception as e:
             print(e)
             sock.close()
+
+
 
 
 
