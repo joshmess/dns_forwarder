@@ -35,15 +35,13 @@ def udphandler(data, address, socket, ip ,deny_list):
     socket.sendto(udpRes, address)
 
 
-if __name__ == 'main':
+if __name__ == '__main__':
 
     # Set up argument parsing automation
     prog = 'python3 dns_forwarder.py'
     descr = 'A DoH-capable DNS Forwarder'
     parser = argparse.ArgumentParser(prog=prog, description=descr)
-    parser.add_argument('-h', '--help',type=str, default='dns_forwarder.py [-h] [-d DST_IP] -f DENY_LIST_FILE [-l '
-                                                         'LOG_FILE] [--doh] [--doh_server DOH_SERVER]',
-                        help='Use default DoH Server')
+
     parser.add_argument('-d', '--DST_IP', type=str, default=None, required=False,  help='DNS Server IP address')
     parser.add_argument('-f', '--DENY_LIST_FILE', type=str, default=None, required=True, help='List of domains to block')
     parser.add_argument('-l', '--LOG_FILE', type=str, default=None, help='Append-only log file')
