@@ -77,24 +77,24 @@ if __name__ == 'main':
         dns_ip = args.DST_IP
         try:
             # UDP DNS query setup
-            sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-            sock.bind((dns_ip,PORT))
+            udp_client_sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+            udp_client_sock.bind((dns_ip,PORT))
             while True:
-                data, address = sock.recvfrom(1024)
-                _thread.start_new_thread(udphandler(data, address, sock, dns_ip, blocked_domains))
+                data, address = udp_client_sock.recvfrom(1024)
+                _thread.start_new_thread(udphandler(data, address, udp_client_sock, dns_ip, blocked_domains))
         except Exception as e:
             print(e)
-            sock.close()
+            udp_client_sock.close()
     else:
         # No DoH-capable or DNS Server specified --> send query to default DNS Server
         dns_ip = '1.1.1.1'
         try:
             # UDP DNS query setup
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.bind((dns_ip, PORT))
+            udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            udp_client_sock.bind((dns_ip, PORT))
             while True:
-                data, address = sock.recvfrom(1024)
-                _thread.start_new_thread(udphandler(data, address, sock, dns_ip, blocked_domains))
+                data, address = udp_client_sock.recvfrom(1024)
+                _thread.start_new_thread(udphandler(data, address, udp_client_sock, dns_ip, blocked_domains))
         except Exception as e:
             print(e)
-            sock.close()
+            udp_client_sock.close()
