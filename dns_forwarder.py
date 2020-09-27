@@ -1,38 +1,58 @@
 import argparse
-import socket
 import _thread
+import socket
+from scapy.all import *
+import sys
+from scapy.layers.dns import DNSQR
 
 # Author: Josh Messitte (811976008)
 # CSCI 6760 Project 2: DoH-capable DNS Forwarder
 # Usage: python3 dns_forwarder.py [-h] [-d DST_IP] -f DENY_LIST_FILE [-l LOG_FILE] [--doh] [--doh_server DOH_SERVER]
 
+
 PORT = 53
 
-
 # Send a UDP query to the DNS server
-def sendUDP(ip, query):
-    server = (ip, PORT)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.connect(server)
-    sock.send(query)
-    res = sock.recv(1024)
-    return res
+#def sendUDP(ip, query):
+#    server = (ip, PORT)
+#    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#    sock.connect(server)
+#    sock.send(query)
+#    res = sock.recv(1024)
+#    return res
 
 
-# New thread to handle UDP DNS request
-def udphandler(data, address, socket, ip ,deny_list):
-    print('Request from client: ',data.encode('hex'),address)
+# New thread to handle UDP request to be sent to DNS server (-d)
+def udphandler(data, address, socket, dns_ip, deny_list):
+    print('Request from client: ', data.encode('hex'), address)
     print('')
 
-    # CHECK BLOCKED domains here???
+    # Form a DNS request using scapy
+    dns_req = scapy.IP(dst=dns_ip)/scapy.UDP(dport=PORT)/scapy.DNS(data)
+    qname = dns_req[DNSQR].qname
 
-    # Get UDP response from server
-    udpRes = sendUDP(ip, data)
+    # Check if domain name should be blocked, log if needed
+    if qname in deny_list:
+        # QNAME should be denied
+        print('ERR: Non existent domain.')
+        if logging:
+            logf.write("" + qname + "DENY")
+        # Send back NXDOMAIN message
 
-    print('UDP response:' , udpRes.encode('hex'))
-    print('')
-    # send back to client
-    socket.sendto(udpRes, address)
+    else:
+        # Get UDP response from server
+        # udpRes = sendUDP(dns_ip, data)
+        # print('UDP response:', udpRes.encode('hex'))
+
+        response = scapy.sr1(dns_req, verbose=0)                # DOES THIS GET ANS FROM SERVER?????
+                                                                # RESOURCE RECORD TYPE?????
+
+        # Log if necessary
+        if logging:
+            logf.write("" + qname + "ALLOW")
+        print('')
+        # send back to client
+        socket.sendto(bytes(response), address)                 # WILL THIS WORK????
 
 
 if __name__ == '__main__':
@@ -62,21 +82,45 @@ if __name__ == '__main__':
         else:
             blocked_domains.append(nextl)
 
+    # Check for log file and open if there
+    logging = False
+    if args.LOG_FILE is not None:
+        logf = open(args.LOG_FILE, "a")
+        logging = True
+
     if args.DOH_SERVER is not None:
         # DoH-capable Server IP provided --> send query to this DoH Server
         doh_host = args.DOH_SERVER
-        #send using DoH protocol
+        try:
+            # UDP DNS query setup
+            udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            udp_client_sock.bind(('', PORT))
+            while True:
+                data, address = udp_client_sock.recvfrom(1024)
+                # Create a new thread for handling UDP requests to be converted to DoH
+        except Exception as e:
+            print(e)
+            udp_client_sock.close()
     elif args.DOH:
         # DoH-capable server specified but not provided --> send to default DoH Server
         doh_host = 'dns.google'
-        # send using DoH protocol
+        try:
+            # UDP DNS query setup
+            udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            udp_client_sock.bind(('', PORT))
+            while True:
+                data, address = udp_client_sock.recvfrom(1024)
+                # Create a new thread for handling UDP requests to be converted to DoH
+        except Exception as e:
+            print(e)
+            udp_client_sock.close()
     elif args.DST_IP is not None:
         # DNS Server IP provided --> send query to this server
         dns_ip = args.DST_IP
         try:
             # UDP DNS query setup
-            udp_client_sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-            udp_client_sock.bind((dns_ip,PORT))
+            udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            udp_client_sock.bind(('', PORT))
             while True:
                 data, address = udp_client_sock.recvfrom(1024)
                 _thread.start_new_thread(udphandler(data, address, udp_client_sock, dns_ip, blocked_domains))
@@ -85,11 +129,11 @@ if __name__ == '__main__':
             udp_client_sock.close()
     else:
         # No DoH-capable or DNS Server specified --> send query to default DNS Server
-        dns_ip = '1.1.1.1'
+        dns_ip = '8.8.8.8'
         try:
             # UDP DNS query setup
             udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_client_sock.bind((dns_ip, PORT))
+            udp_client_sock.bind(('', PORT))
             while True:
                 data, address = udp_client_sock.recvfrom(1024)
                 _thread.start_new_thread(udphandler(data, address, udp_client_sock, dns_ip, blocked_domains))
