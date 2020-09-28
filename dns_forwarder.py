@@ -38,13 +38,16 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
     qname = dns_req[DNSQR].qname                              
     
     # Check if domain name should be blocked, log if needed
-    if qname in deny_list:
-        # QNAME should be denied
-        print('ERR: Non existent domain.')
-        if logging:
-            print('logging deny...')
-            logf.write("" + qname + "DENY")
-        # Send back NXDOMAIN message
+    for domain in deny_list:
+        print("comparing", str(qname), " and ", domain)
+        if domain in str(qname):
+            # QNAME should be denied
+            print('ERR: Non existent domain.')
+            if logging:
+                print('logging deny...')
+                logf.write(str(qname))
+                logf.write(' DENY\n')
+            # Send back NXDOMAIN message
 
     else:     
         #Send UDP query to upstream DNS resolver
@@ -53,11 +56,12 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
         # Log if necessary
         if logging:
             print('loggging...')
-            logf.write("" + qname + "ALLOW")
+            logf.write(str(qname))
+            logf.write(' ALLOWED\n')
         print('')
         # send back to client
         print('sending response to client...')
-        socket.sendto(udp_response, address)                 # WILL THIS WORK????
+        socket.sendto(udp_response, address)                 #
 
 
 if __name__ == '__main__':
@@ -80,6 +84,7 @@ if __name__ == '__main__':
     denyf_path = args.DENY_LIST_FILE
     denyf = open(denyf_path,'r')
     blocked_domains = denyf.readlines()
+
 
     # Check for log file and open if there
     logging = False

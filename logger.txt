@@ -1,0 +1,6 @@
+b'www.uga.edu.' ALLOWED
+b'www.facebook.com.' ALLOWED
+b'www.youtube.com.' ALLOWED
+b'www.youtube.com.' ALLOWED
+b'www.instagram.com.' ALLOWED
+b'www.instagram.com.' ALLOWED
