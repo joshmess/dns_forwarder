@@ -1,8 +1,6 @@
 import argparse
 import _thread
-import socket
 from scapy.all import *
-import sys
 from scapy.layers.dns import DNSQR
 import urllib.request
 
@@ -11,21 +9,48 @@ import urllib.request
 # Usage: python3 dns_forwarder.py [-h] [-d DST_IP] -f DENY_LIST_FILE [-l LOG_FILE] [--doh] [--doh_server DOH_SERVER]
 
 
-PORT = 6760
+UDPPORT = 53
+TCPPORT = 443
+
 
 # New thread to handle DoH requests
-def dohHandler():
+def dohHandler(data, address, socket, doh_host, deny_list):
     # implement DNS over HTTPS
+    print('Request from client: ', data.encode('hex'), address)
     print('')
+
+    dns_req = scapy.IP(dst=doh_host) / scapy.TCP(dport=TCPPORT) / scapy.DNS(data)
+    qname = dns_req[DNSQR].qname
+
+    # Check if domain name should be blocked, log if needed
+    if qname in deny_list:
+        # QNAME should be denied
+        print('ERR: Non existent domain.')
+        if logging:
+            logf.write("" + qname + "DENY")
+        # Send back NXDOMAIN message
+
+    else:
+        # Send using DNS over HTTP protocol
+        response = scapy.sr1(dns_req, verbose=0)                # DOES THIS GET ANS FROM SERVER?????
+                                                                # RESOURCE RECORD TYPE?????
+        # Log if necessary
+        if logging:
+            logf.write("" + qname + "ALLOW")
+
+        print('')
+        # send back to client
+        socket.sendto(bytes(response), address)                 # WILL THIS WORK????
 
 
 # New thread to handle UDP request to be sent to DNS server (-d)
 def dnsHandler(data, address, socket, dns_ip, deny_list):
+
     print('Request from client: ', data.encode('hex'), address)
     print('')
 
     # Form a DNS request using scapy
-    dns_req = scapy.IP(dst=dns_ip)/scapy.UDP(dport=PORT)/scapy.DNS(data)
+    dns_req = scapy.IP(dst=dns_ip)/scapy.UDP(dport=UDPPORT)/scapy.DNS(data)
     qname = dns_req[DNSQR].qname                               # WIll THIS WORK????
 
     # Check if domain name should be blocked, log if needed
@@ -65,7 +90,6 @@ if __name__ == '__main__':
     # Parse the given args
     args = parser.parse_args()
 
-
     # Open and read in domains to block
     denyf_path = args.DENY_LIST_FILE
     denyf = open(denyf_path,'r')
@@ -82,34 +106,34 @@ if __name__ == '__main__':
         doh_host = args.DOH_SERVER
         try:
             # UDP DNS query setup
-            udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_client_sock.bind(('', PORT))
+            tcp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            tcp_client_sock.bind(('', TCPPORT))
             while True:
-                data, address = udp_client_sock.recvfrom(1024)
-                # Create a new thread for handling UDP requests to be converted to DoH
+                data, address = tcp_client_sock.recvfrom(1024)
+                _thread.start_new_thread(dohHandler(data, address, tcp_client_sock, doh_host, blocked_domains))
         except Exception as e:
             print(e)
-            udp_client_sock.close()
+            tcp_client_sock.close()
     elif args.DOH:
         # DoH-capable server specified but not provided --> send to default DoH Server
         doh_host = 'dns.google'
         try:
             # UDP DNS query setup
-            udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_client_sock.bind(('', PORT))
+            tcp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            tcp_client_sock.bind(('', TCPPORT))
             while True:
-                data, address = udp_client_sock.recvfrom(1024)
-                # Create a new thread for handling UDP requests to be converted to DoH
+                data, address = tcp_client_sock.recvfrom(1024)
+                _thread.start_new_thread(dohHandler(data, address, tcp_client_sock, doh_host, blocked_domains))
         except Exception as e:
             print(e)
-            udp_client_sock.close()
+            tcp_client_sock.close()
     elif args.DST_IP is not None:
         # DNS Server IP provided --> send query to this server
         dns_ip = args.DST_IP
         try:
             # UDP DNS query setup
             udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_client_sock.bind(('', PORT))
+            udp_client_sock.bind(('', UDPPORT))
             while True:
                 data, address = udp_client_sock.recvfrom(1024)
                 print('starting thread')
@@ -123,7 +147,7 @@ if __name__ == '__main__':
         try:
             # UDP DNS query setup
             udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_client_sock.bind(('', PORT))
+            udp_client_sock.bind(('', UDPPORT))
             while True:
                 data, address = udp_client_sock.recvfrom(1024)
                 _thread.start_new_thread(dnsHandler(data, address, udp_client_sock, dns_ip, blocked_domains))
