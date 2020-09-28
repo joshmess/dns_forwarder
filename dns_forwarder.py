@@ -1,6 +1,6 @@
 import argparse
 import _thread
-from scapy.all import DNS, DNSQR, IP, sr1, UDP
+from scapy.all import DNS, DNSQR, IP, UDP
 from scapy.layers.dns import DNSQR
 import urllib.request
 import socket
@@ -50,7 +50,6 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
 
     else:
         # Send UDP query to upstream DNS resolver
-
         udp_response = sendUDP(dns_ip, data)
         # Log if necessary
         if logging:
@@ -60,7 +59,7 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
         print('')
         # send back to client
         print('sending response to client...')
-        socket.sendto(udp_response, address)  #
+        socket.sendto(udp_response, address)
 
 
 if __name__ == '__main__':
@@ -141,7 +140,7 @@ if __name__ == '__main__':
         try:
             # UDP DNS query setup
             udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_client_sock.bind(('', UDP_PORT))
+            udp_client_sock.bind(('', 6760))
             while True:
                 data, address = udp_client_sock.recvfrom(1024)
                 _thread.start_new_thread(dnsHandler(data, address, udp_client_sock, dns_ip, blocked_domains))
