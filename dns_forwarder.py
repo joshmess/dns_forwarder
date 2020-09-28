@@ -14,7 +14,7 @@ import urllib.request
 PORT = 53
 
 # Send a UDP query to the DNS server
-#def sendUDP(ip, query):
+# def sendUDP(ip, query):
 #    server = (ip, PORT)
 #    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 #    sock.connect(server)
@@ -23,8 +23,14 @@ PORT = 53
 #    return res
 
 
+# New thread to handle DoH requests
+def dohHandler():
+    # implement DNS over HTTPS
+    print('')
+
+
 # New thread to handle UDP request to be sent to DNS server (-d)
-def udphandler(data, address, socket, dns_ip, deny_list):
+def dnsHandler(data, address, socket, dns_ip, deny_list):
     print('Request from client: ', data.encode('hex'), address)
     print('')
 
@@ -125,7 +131,7 @@ if __name__ == '__main__':
             while True:
                 data, address = udp_client_sock.recvfrom(1024)
                 print('starting thread')
-                _thread.start_new_thread(udphandler(data, address, udp_client_sock, dns_ip, blocked_domains))
+                _thread.start_new_thread(dnsHandler(data, address, udp_client_sock, dns_ip, blocked_domains))
         except Exception as e:
             print(e)
             udp_client_sock.close()
@@ -138,7 +144,7 @@ if __name__ == '__main__':
             udp_client_sock.bind(('', PORT))
             while True:
                 data, address = udp_client_sock.recvfrom(1024)
-                _thread.start_new_thread(udphandler(data, address, udp_client_sock, dns_ip, blocked_domains))
+                _thread.start_new_thread(dnsHandler(data, address, udp_client_sock, dns_ip, blocked_domains))
         except Exception as e:
             print(e)
             udp_client_sock.close()
