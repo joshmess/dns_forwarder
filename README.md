@@ -15,4 +15,11 @@ dig -p 6760 @your_ip_address example_domain_name
 ```
 
 
+## Outstanding Issues:
+- fix logging detection
+- fetch resource record type for logging
+- implemetn DoH using urllib (TCP?)
+
+
+
 
