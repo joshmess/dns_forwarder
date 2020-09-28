@@ -14,6 +14,10 @@ Test the server:
 dig -p 6760 @your_ip_address example_domain_name
 ```
 
+### Questions:
+- Errno13 whne binding client socket to port 53
+- Bind client socket to port 6760 
+- Include -p 6760 argument when testing dig
 
 ## Outstanding Issues:
 - fix logging detection
