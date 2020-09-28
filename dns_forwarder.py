@@ -4,6 +4,7 @@ import socket
 from scapy.all import *
 import sys
 from scapy.layers.dns import DNSQR
+import urllib.request
 
 # Author: Josh Messitte (811976008)
 # CSCI 6760 Project 2: DoH-capable DNS Forwarder
@@ -123,6 +124,7 @@ if __name__ == '__main__':
             udp_client_sock.bind(('', PORT))
             while True:
                 data, address = udp_client_sock.recvfrom(1024)
+                print('starting thread')
                 _thread.start_new_thread(udphandler(data, address, udp_client_sock, dns_ip, blocked_domains))
         except Exception as e:
             print(e)
