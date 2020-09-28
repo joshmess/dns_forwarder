@@ -11,17 +11,7 @@ import urllib.request
 # Usage: python3 dns_forwarder.py [-h] [-d DST_IP] -f DENY_LIST_FILE [-l LOG_FILE] [--doh] [--doh_server DOH_SERVER]
 
 
-PORT = 53
-
-# Send a UDP query to the DNS server
-# def sendUDP(ip, query):
-#    server = (ip, PORT)
-#    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#    sock.connect(server)
-#    sock.send(query)
-#    res = sock.recv(1024)
-#    return res
-
+PORT = 6760
 
 # New thread to handle DoH requests
 def dohHandler():
@@ -36,7 +26,7 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
 
     # Form a DNS request using scapy
     dns_req = scapy.IP(dst=dns_ip)/scapy.UDP(dport=PORT)/scapy.DNS(data)
-    qname = dns_req[DNSQR].qname
+    qname = dns_req[DNSQR].qname                               # WIll THIS WORK????
 
     # Check if domain name should be blocked, log if needed
     if qname in deny_list:
@@ -47,9 +37,6 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
         # Send back NXDOMAIN message
 
     else:
-        # Get UDP response from server
-        # udpRes = sendUDP(dns_ip, data)
-        # print('UDP response:', udpRes.encode('hex'))
 
         response = scapy.sr1(dns_req, verbose=0)                # DOES THIS GET ANS FROM SERVER?????
                                                                 # RESOURCE RECORD TYPE?????
@@ -72,22 +59,17 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--DST_IP', type=str, default=None, required=False,  help='DNS Server IP address')
     parser.add_argument('-f', '--DENY_LIST_FILE', type=str, default=None, required=True, help='List of domains to block')
     parser.add_argument('-l', '--LOG_FILE', type=str, default=None, help='Append-only log file')
-    parser.add_argument('--doh', '--DOH', help='Use default DoH Server', action='store_true')
-    parser.add_argument('--doh_server', '--DOH_SERVER', type=str, default=None, help='DoH Server IP address')
+    parser.add_argument('-doh', '--DOH', help='Use default DoH Server', action='store_true')
+    parser.add_argument('-doh_server', '--DOH_SERVER', type=str, default=None, help='DoH Server IP address')
 
     # Parse the given args
     args = parser.parse_args()
 
+
     # Open and read in domains to block
-    blocked_domains = []
     denyf_path = args.DENY_LIST_FILE
     denyf = open(denyf_path,'r')
-    while True:
-        nextl = denyf.readline()
-        if nextl == '\n':
-            break
-        else:
-            blocked_domains.append(nextl)
+    blocked_domains = denyf.readlines()
 
     # Check for log file and open if there
     logging = False
