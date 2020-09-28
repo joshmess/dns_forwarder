@@ -7,17 +7,18 @@ import socket
 
 # Author: Josh Messitte (811976008)
 # CSCI 6760 Project 2: DoH-capable DNS Forwarder
-# Usage: python3 dns_forwarder.py [-h] [-d DST_IP] -f DENY_LIST_FILE [-l LOG_FILE] [--doh] [--doh_server DOH_SERVER]
+# Run the server: python3 dns_forwarder.py [-h] [-d DST_IP] -f DENY_LIST_FILE [-l LOG_FILE] [--doh] [--doh_server DOH_SERVER]
+# Test the server: dig -p 6760 @your_ip_address example_domain_name
 
 
-UDPPORT = 53
-TCPPORT = 443
+UDP_PORT = 53
+TCP_PORT = 443
 
 
 # Send a UDP query to the DNS server
-def sendUDP(dns_ip,query):
-    sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-    sock.connect((dns_ip,53))
+def sendUDP(dns_ip, query):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.connect((dns_ip, UDP_PORT))
     sock.send(query)
     data = sock.recv(1024)
     return data
@@ -31,12 +32,10 @@ def dohHandler(data, address, socket, doh_host, deny_list):
 
 # New thread to handle UDP request to be sent to DNS server (-d)
 def dnsHandler(data, address, socket, dns_ip, deny_list):
-
-    
     # Form a DNS request using scapy
-    dns_req = IP(dst=dns_ip)/UDP(dport=UDPPORT)/DNS(data)
-    qname = dns_req[DNSQR].qname                              
-    
+    dns_req = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(data)
+    qname = dns_req[DNSQR].qname
+
     # Check if domain name should be blocked, log if needed
     for domain in deny_list:
         print("comparing", str(qname), " and ", domain)
@@ -49,10 +48,10 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
                 logf.write(' DENY\n')
             # Send back NXDOMAIN message
 
-    else:     
-        #Send UDP query to upstream DNS resolver
-        
-        udp_response = sendUDP(dns_ip,data)
+    else:
+        # Send UDP query to upstream DNS resolver
+
+        udp_response = sendUDP(dns_ip, data)
         # Log if necessary
         if logging:
             print('loggging...')
@@ -61,7 +60,7 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
         print('')
         # send back to client
         print('sending response to client...')
-        socket.sendto(udp_response, address)                 #
+        socket.sendto(udp_response, address)  #
 
 
 if __name__ == '__main__':
@@ -71,8 +70,9 @@ if __name__ == '__main__':
     descr = 'A DoH-capable DNS Forwarder'
     parser = argparse.ArgumentParser(prog=prog, description=descr)
 
-    parser.add_argument('-d', '--DST_IP', type=str, default=None, required=False,  help='DNS Server IP address')
-    parser.add_argument('-f', '--DENY_LIST_FILE', type=str, default=None, required=True, help='List of domains to block')
+    parser.add_argument('-d', '--DST_IP', type=str, default=None, required=False, help='DNS Server IP address')
+    parser.add_argument('-f', '--DENY_LIST_FILE', type=str, default=None, required=True,
+                        help='List of domains to block')
     parser.add_argument('-l', '--LOG_FILE', type=str, default=None, help='Append-only log file')
     parser.add_argument('--doh', help='Use default DoH Server', action='store_true')
     parser.add_argument('--doh_server', type=str, default=None, help='DoH Server IP address')
@@ -82,9 +82,8 @@ if __name__ == '__main__':
 
     # Open and read in domains to block
     denyf_path = args.DENY_LIST_FILE
-    denyf = open(denyf_path,'r')
+    denyf = open(denyf_path, 'r')
     blocked_domains = denyf.readlines()
-
 
     # Check for log file and open if there
     logging = False
@@ -99,13 +98,13 @@ if __name__ == '__main__':
         try:
             # UDP DNS  setup
             udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_client_sock.connect(('', UDPPORT))
+            udp_client_sock.connect(('', UDP_PORT))
             while True:
                 data, address = udp_client_sock.recvfrom(1024)
                 _thread.start_new_thread(dohHandler(data, address, udp_client_sock, doh_host, blocked_domains))
         except Exception as e:
             print(e)
-            tcp_client_sock.close()
+            udp_client_sock.close()
     elif args.doh:
         print('--doh provided')
         # DoH-capable server specified but not provided --> send to default DoH Server
@@ -113,13 +112,13 @@ if __name__ == '__main__':
         try:
             # UDP DNS query setup
             udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_client_sock.bind(('', UDPPORT))
+            udp_client_sock.bind(('', UDP_PORT))
             while True:
-                data, address = udpclient_sock.recvfrom(1024)
+                data, address = udp_client_sock.recvfrom(1024)
                 _thread.start_new_thread(dohHandler(data, address, udp_client_sock, doh_host, blocked_domains))
         except Exception as e:
             print(e)
-            tcp_client_sock.close()
+            udp_client_sock.close()
     elif args.DST_IP is not None:
         print('-d provided')
         # DNS Server IP provided --> send query to this server
@@ -142,7 +141,7 @@ if __name__ == '__main__':
         try:
             # UDP DNS query setup
             udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_client_sock.bind(('', UDPPORT))
+            udp_client_sock.bind(('', UDP_PORT))
             while True:
                 data, address = udp_client_sock.recvfrom(1024)
                 _thread.start_new_thread(dnsHandler(data, address, udp_client_sock, dns_ip, blocked_domains))
