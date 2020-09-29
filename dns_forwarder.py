@@ -4,6 +4,7 @@ from scapy.all import DNS, DNSQR, IP, UDP
 from scapy.layers.dns import DNSQR
 import urllib.request
 import socket
+import dns.resolver
 
 # Author: Josh Messitte (811976008)
 # CSCI 6760 Project 2: DoH-capable DNS Forwarder
@@ -27,7 +28,14 @@ def sendUDP(dns_ip, query):
 # New thread to handle DoH requests
 def dohHandler(data, address, socket, doh_host, deny_list):
     # implement DNS over HTTPS
-    print('do this')
+    dns_req = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(data)
+    qname = dns_req[DNSQR].qname
+    qname_str = qname.decode()
+    
+    #url = 'https://' + qname_str
+    #f = urllib.request.urlopen(url)
+    #data = f.read()
+
 
 
 # New thread to handle UDP request to be sent to DNS server (-d)
@@ -35,27 +43,27 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
     # Form a DNS request using scapy
     dns_req = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(data)
     qname = dns_req[DNSQR].qname
-    qname_str = qname.decode()
-    
+
+
     # Check if domain name should be blocked, log if needed
     for domain in deny_list:
-        print("comparing", qname_str, " and ", domain)
-        if domain in qname_str:
+        domainbytes = domain.encode()
+        print("comparing", domainbytes, " and ", domain)
+        if domain == domainbytes:
             # QNAME should be denied
-            print('ERR: Non existent domain.')
             if logging:
-                print('logging deny...')
-                logf.write(qname_str)
+                print('logging denied domain...')
+                logf.write(qname.decode())
                 logf.write(' DENY\n')
-            # Send back NXDOMAIN message
-            
-    
+            denied_req = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(rd=1, qd=DNSQR(qname=qname), rcode=3)
+            socket.sendto(denied_req, address)
+
     # Send UDP query to upstream DNS resolver
     udp_response = sendUDP(dns_ip, data)
     # Log if necessary
     if logging:
-        print('loggging...')
-        logf.write(qname_str)
+        print('logging...')
+        logf.write(qname.decode())
         logf.write(' ALLOWED\n')
     print('')
     # send back to client
