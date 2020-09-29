@@ -11,17 +11,13 @@ python3 dns_forwarder.py [-h] -f DENY_LIST_FILE [-d DST_IP] [-l LOG_FILE] [--doh
 
 Test the server:
 ```
-dig -p 6760 @your_ip_address example_domain_name
+dig @your_ip_address example_domain_name
 ```
 
 ### Questions:
-- Errno13 whne binding client socket to port 53
-- Bind client socket to port 6760 
-- Include -p 6760 argument when testing dig
-- DoH: receive UDP --> convert to TCP  --> openurl()?
+- 
 
 ### Outstanding Issues:
-- fix logging detection
 - fetch resource record type for logging
 - send back NXDOMAIN message
 - implement DoH using urllib (TCP?)

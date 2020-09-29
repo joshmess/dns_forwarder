@@ -137,7 +137,7 @@ if __name__ == '__main__':
         try:
             # UDP DNS query setup
             udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_client_sock.bind(('', 6760))
+            udp_client_sock.bind(('', UDP_PORT))
             while True:
                 data, address = udp_client_sock.recvfrom(1024)
                 print('starting thread')
@@ -152,7 +152,7 @@ if __name__ == '__main__':
         try:
             # UDP DNS query setup
             udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_client_sock.bind(('', 6760))
+            udp_client_sock.bind(('', UDP_PORT))
             while True:
                 data, address = udp_client_sock.recvfrom(1024)
                 _thread.start_new_thread(dnsHandler(data, address, udp_client_sock, dns_ip, blocked_domains))
