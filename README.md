@@ -18,6 +18,7 @@ dig -p 6760 @your_ip_address example_domain_name
 - Errno13 whne binding client socket to port 53
 - Bind client socket to port 6760 
 - Include -p 6760 argument when testing dig
+- DoH: receive UDP --> convert to TCP  --> openurl()?
 
 ## Outstanding Issues:
 - fix logging detection
