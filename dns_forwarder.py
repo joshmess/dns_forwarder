@@ -35,31 +35,32 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
     # Form a DNS request using scapy
     dns_req = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(data)
     qname = dns_req[DNSQR].qname
-
+    qname_str = qname.decode()
+    
     # Check if domain name should be blocked, log if needed
     for domain in deny_list:
-        print("comparing", str(qname), " and ", domain)
-        if domain in str(qname):
+        print("comparing", qname_str, " and ", domain)
+        if domain in qname_str:
             # QNAME should be denied
             print('ERR: Non existent domain.')
             if logging:
                 print('logging deny...')
-                logf.write(str(qname))
+                logf.write(qname_str)
                 logf.write(' DENY\n')
             # Send back NXDOMAIN message
-
-    else:
-        # Send UDP query to upstream DNS resolver
-        udp_response = sendUDP(dns_ip, data)
-        # Log if necessary
-        if logging:
-            print('loggging...')
-            logf.write(str(qname))
-            logf.write(' ALLOWED\n')
-        print('')
-        # send back to client
-        print('sending response to client...')
-        socket.sendto(udp_response, address)
+            
+    
+    # Send UDP query to upstream DNS resolver
+    udp_response = sendUDP(dns_ip, data)
+    # Log if necessary
+    if logging:
+        print('loggging...')
+        logf.write(qname_str)
+        logf.write(' ALLOWED\n')
+    print('')
+    # send back to client
+    print('sending response to client...')
+    socket.sendto(udp_response, address)
 
 
 if __name__ == '__main__':
