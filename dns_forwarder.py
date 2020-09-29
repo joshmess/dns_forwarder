@@ -4,7 +4,7 @@ from scapy.all import DNS, DNSQR, IP, UDP
 from scapy.layers.dns import DNSQR
 import urllib.request
 import socket
-import dns.resolver
+
 
 # Author: Josh Messitte (811976008)
 # CSCI 6760 Project 2: DoH-capable DNS Forwarder
@@ -43,20 +43,23 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
     # Form a DNS request using scapy
     dns_req = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(data)
     qname = dns_req[DNSQR].qname
-
+    qname_str = qname.decode()
+    qname_str = qname_str[:-1]
+    qname = qname_str.encode()
 
     # Check if domain name should be blocked, log if needed
     for domain in deny_list:
+        domain = domain.strip()
         domainbytes = domain.encode()
-        print("comparing", domainbytes, " and ", domain)
-        if domain == domainbytes:
+        
+        if qname == domainbytes:
             # QNAME should be denied
             if logging:
                 print('logging denied domain...')
                 logf.write(qname.decode())
-                logf.write(' DENY\n')
-            denied_req = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(rd=1, qd=DNSQR(qname=qname), rcode=3)
-            socket.sendto(denied_req, address)
+                logf.write(' DENY\n') 
+            socket.sendto(data, address)
+            return
 
     # Send UDP query to upstream DNS resolver
     udp_response = sendUDP(dns_ip, data)
