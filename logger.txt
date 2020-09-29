@@ -1,5 +1,1 @@
-www.uga.edu ALLOWED
-www.uga.edu ALLOWED
-www.uga.edu ALLOWED
-www.twitter.com DENY
-www.facebook.com ALLOWED
+www.twitter.com A DENY

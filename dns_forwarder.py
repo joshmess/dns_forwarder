@@ -40,12 +40,25 @@ def dohHandler(data, address, socket, doh_host, deny_list):
 def dnsHandler(data, address, socket, dns_ip, deny_list):
     # Form a DNS request using scapy
     dns_req = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(data)
+    qid = dns_req[DNS].id
+    print('id:' , qid)
     qname = dns_req[DNSQR].qname
     orig_qname = qname
     qname_str = qname.decode()
     qname_str = qname_str[:-1]
     qname = qname_str.encode()
 
+    qtype = dns_req[DNSQR].qtype
+    
+    if qtype == 1:
+        query_type = 'A'
+    if qtype == 5:
+        query_type = 'CNAME'
+    if qtype == 2:
+        query_type = 'NS'
+    if qtype == 15:
+        query_type == 'MX'
+            
     # Check if domain name should be blocked, log if needed
     for domain in deny_list:
         domain = domain.strip()
@@ -56,9 +69,15 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
             if logging:
                 print('logging denied domain...')
                 logf.write(qname.decode())
+                logf.write(' ')
+                logf.write(query_type)
                 logf.write(' DENY\n')
-            denied_resp = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(rd=1, qd=DNSQR(qname=orig_qname), rcode=3)
-            socket.sendto(bytes(denied_resp), address)
+            deny_pkt = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(data)
+            deny_pkt[DNS].rcode = 3
+            deny_pkt[DNS].id = qid
+            print('nid:', deny_pkt[DNS].id)
+            
+            socket.sendto(bytes(deny_pkt), address)
             return
 
     # Send UDP query to upstream DNS resolver
@@ -67,6 +86,8 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
     if logging:
         print('logging...')
         logf.write(qname.decode())
+        logf.write(' ')
+        logf.write(query_type)
         logf.write(' ALLOWED\n')
     print('')
     # send back to client
