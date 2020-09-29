@@ -18,7 +18,6 @@ dig @your_ip_address example_domain_name
 - when testing, will dig provide an IP 
 - changing id of packets
 ### Outstanding Issues:
-- fetch resource record type for logging
 - send back NXDOMAIN message
 - implement DoH using urllib (TCP?)
 
