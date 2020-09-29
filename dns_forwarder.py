@@ -5,7 +5,6 @@ from scapy.layers.dns import DNSQR
 import urllib.request
 import socket
 
-
 # Author: Josh Messitte (811976008)
 # CSCI 6760 Project 2: DoH-capable DNS Forwarder
 # Run the server: python3 dns_forwarder.py [-h] [-d DST_IP] -f DENY_LIST_FILE [-l LOG_FILE] [--doh] [--doh_server DOH_SERVER]
@@ -31,11 +30,10 @@ def dohHandler(data, address, socket, doh_host, deny_list):
     dns_req = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(data)
     qname = dns_req[DNSQR].qname
     qname_str = qname.decode()
-    
-    #url = 'https://' + qname_str
-    #f = urllib.request.urlopen(url)
-    #data = f.read()
 
+    # url = 'https://' + qname_str
+    # f = urllib.request.urlopen(url)
+    # data = f.read()
 
 
 # New thread to handle UDP request to be sent to DNS server (-d)
@@ -43,6 +41,7 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
     # Form a DNS request using scapy
     dns_req = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(data)
     qname = dns_req[DNSQR].qname
+    orig_qname = qname
     qname_str = qname.decode()
     qname_str = qname_str[:-1]
     qname = qname_str.encode()
@@ -51,14 +50,15 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
     for domain in deny_list:
         domain = domain.strip()
         domainbytes = domain.encode()
-        
+
         if qname == domainbytes:
             # QNAME should be denied
             if logging:
                 print('logging denied domain...')
                 logf.write(qname.decode())
-                logf.write(' DENY\n') 
-            socket.sendto(data, address)
+                logf.write(' DENY\n')
+            denied_resp = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(rd=1, qd=DNSQR(qname=orig_qname), rcode=3)
+            socket.sendto(bytes(denied_resp), address)
             return
 
     # Send UDP query to upstream DNS resolver
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     elif args.doh:
         print('--doh provided')
         # DoH-capable server specified but not provided --> send to default DoH Server
-        doh_host = 'dns.google'
+        doh_host = '8.8.8.8'
         try:
             # UDP DNS query setup
             udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
