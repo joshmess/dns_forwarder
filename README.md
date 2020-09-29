@@ -20,7 +20,7 @@ dig -p 6760 @your_ip_address example_domain_name
 - Include -p 6760 argument when testing dig
 - DoH: receive UDP --> convert to TCP  --> openurl()?
 
-## Outstanding Issues:
+### Outstanding Issues:
 - fix logging detection
 - fetch resource record type for logging
 - implement DoH using urllib (TCP?)
