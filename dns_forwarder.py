@@ -7,6 +7,8 @@ import socket
 import http.client
 
 
+
+
 # Author: Josh Messitte (811976008)
 # CSCI 6760 Project 2: DoH-capable DNS Forwarder
 # Run the server: python3 dns_forwarder.py [-h] [-d DST_IP] -f DENY_LIST_FILE [-l LOG_FILE] [--doh] [--doh_server DOH_SERVER]
@@ -27,7 +29,7 @@ def sendUDP(dns_ip, query):
 
 
 # New thread to handle DoH requests
-def dohHandler(data, address, socket, doh_host, deny_list):
+def dohHandler(data, address, csocket, doh_host, deny_list):
     # implement DNS over HTTPS
     dns_req = IP(dst=doh_host) / UDP(dport=UDP_PORT) / DNS(data)
     qid = dns_req[DNS].id
@@ -66,30 +68,37 @@ def dohHandler(data, address, socket, doh_host, deny_list):
             deny_pkt[DNS].id = qid
             print('nid:', deny_pkt[DNS].id)
 
-            socket.sendto(bytes(deny_pkt), address)
+            csocket.sendto(bytes(deny_pkt), address)
             return
 
-    
-    #class HTTPSConnection(http.client.HTTPConnection):
-    #    def connect(self) -> None:
-    #    self.sock = socket.connect((doh_host,TCP_PORT))            
-    
-    #class HTTPSHandler(urllib.request.HTTPSHandler):
-    #     def https_open(self,req):
-    #     return self.do_open(HTTPSConnection, req)
+    # Log if necessary
+    if logging:
+        print('logging...')
+        logf.write(qname.decode())
+        logf.write(' ')
+        logf.write(query_type)
+        logf.write(' ALLOWED\n')
 
-    
-    #opener = urllib.request.build_opener(HTTPSHandler)
-    
-    #urllib.request.install_opener(opener)
+    # Open url and send data back to client
+    class HTTPSConnection(http.client.HTTPSConnection):
+        def connect(self) -> None:
+            self.sock = socket.create_connection((doh_host, TCP_PORT))
 
-    #url = 'https://' + qname_str
-    #request = urllib.request.urlopen(url)
-    #resp = request.read()
-    #socket.sendto(resp)
+    class HTTPSHandler(urllib.request.HTTPSHandler):
+        def https_open(self, req):
+            return self.do_open(HTTPSConnection, req)
+
+    opener = urllib.request.build_opener(HTTPSHandler)
+    urllib.request.install_opener(opener)
+
+    url = 'https://' + qname_str
+    request = urllib.request.urlopen(url)
+    resp = request.read()
+    csocket.sendto(resp,address)
+
 
 # New thread to handle UDP request to be sent to DNS server (-d)
-def dnsHandler(data, address, socket, dns_ip, deny_list):
+def dnsHandler(data, address, csocket, dns_ip, deny_list):
     # Form a DNS request using scapy
     dns_req = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(data)
     qid = dns_req[DNS].id
@@ -128,7 +137,7 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
             deny_pkt[DNS].id = qid
             print('nid:', deny_pkt[DNS].id)
 
-            socket.sendto(bytes(deny_pkt), address)
+            csocket.sendto(bytes(deny_pkt), address)
             return
 
     # Send UDP query to upstream DNS resolver
@@ -143,7 +152,7 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
     print('')
     # send back to client
     print('sending response to client...')
-    socket.sendto(udp_response, address)
+    csocket.sendto(udp_response, address)
 
 
 if __name__ == '__main__':
@@ -181,7 +190,7 @@ if __name__ == '__main__':
         try:
             # UDP DNS  setup
             udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_client_sock.bind(('', UDP_PORT))
+            udp_client_sock.connect(('', UDP_PORT))
             while True:
                 data, address = udp_client_sock.recvfrom(1024)
                 _thread.start_new_thread(dohHandler(data, address, udp_client_sock, doh_host, blocked_domains))
