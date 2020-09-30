@@ -4,6 +4,8 @@ from scapy.all import DNS, DNSQR, IP, UDP
 from scapy.layers.dns import DNSQR
 import urllib.request
 import socket
+import http.client
+
 
 # Author: Josh Messitte (811976008)
 # CSCI 6760 Project 2: DoH-capable DNS Forwarder
@@ -27,29 +29,16 @@ def sendUDP(dns_ip, query):
 # New thread to handle DoH requests
 def dohHandler(data, address, socket, doh_host, deny_list):
     # implement DNS over HTTPS
-    dns_req = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(data)
-    qname = dns_req[DNSQR].qname
-    qname_str = qname.decode()
-
-    # url = 'https://' + qname_str
-    # f = urllib.request.urlopen(url)
-    # data = f.read()
-
-
-# New thread to handle UDP request to be sent to DNS server (-d)
-def dnsHandler(data, address, socket, dns_ip, deny_list):
-    # Form a DNS request using scapy
-    dns_req = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(data)
+    dns_req = IP(dst=doh_host) / UDP(dport=UDP_PORT) / DNS(data)
     qid = dns_req[DNS].id
-    print('id:' , qid)
+    print('id:', qid)
     qname = dns_req[DNSQR].qname
-    orig_qname = qname
     qname_str = qname.decode()
     qname_str = qname_str[:-1]
     qname = qname_str.encode()
 
     qtype = dns_req[DNSQR].qtype
-    
+
     if qtype == 1:
         query_type = 'A'
     if qtype == 5:
@@ -58,7 +47,66 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
         query_type = 'NS'
     if qtype == 15:
         query_type == 'MX'
-            
+
+    # Check if domain name should be blocked, log if needed
+    for domain in deny_list:
+
+        domain = domain.strip()
+        domainbytes = domain.encode()
+        if qname == domainbytes:
+            # QNAME should be denied
+            if logging:
+                print('logging denied domain...')
+                logf.write(qname.decode())
+                logf.write(' ')
+                logf.write(query_type)
+                logf.write(' DENY\n')
+            deny_pkt = IP(dst=doh_host) / UDP(dport=UDP_PORT) / DNS(data)
+            deny_pkt[DNS].rcode = 3
+            deny_pkt[DNS].id = qid
+            print('nid:', deny_pkt[DNS].id)
+
+            socket.sendto(bytes(deny_pkt), address)
+            return
+
+    class HTTPSConnection(http.client.HTTPConnection):
+        def connect(self) -> None:
+            self.sock = socket.create_connection((doh_host,TCP_PORT))
+
+    class HTTPSHandler(http.client.HTTPConnection):
+        def https_open(self,req):
+            return self.do_open(HTTPSConnection, req)
+
+    opener = urllib.request.build_opener(HTTPSHandler)
+    urllib.request.install_opener(opener)
+
+    url = 'https://' + qname_str
+    request = urllib.request.urlopen(url)
+    resp = request.read()
+    socket.sendto(resp)
+
+# New thread to handle UDP request to be sent to DNS server (-d)
+def dnsHandler(data, address, socket, dns_ip, deny_list):
+    # Form a DNS request using scapy
+    dns_req = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(data)
+    qid = dns_req[DNS].id
+    print('id:', qid)
+    qname = dns_req[DNSQR].qname
+    qname_str = qname.decode()
+    qname_str = qname_str[:-1]
+    qname = qname_str.encode()
+
+    qtype = dns_req[DNSQR].qtype
+
+    if qtype == 1:
+        query_type = 'A'
+    if qtype == 5:
+        query_type = 'CNAME'
+    if qtype == 2:
+        query_type = 'NS'
+    if qtype == 15:
+        query_type == 'MX'
+
     # Check if domain name should be blocked, log if needed
     for domain in deny_list:
         domain = domain.strip()
@@ -76,7 +124,7 @@ def dnsHandler(data, address, socket, dns_ip, deny_list):
             deny_pkt[DNS].rcode = 3
             deny_pkt[DNS].id = qid
             print('nid:', deny_pkt[DNS].id)
-            
+
             socket.sendto(bytes(deny_pkt), address)
             return
 
