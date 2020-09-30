@@ -1,1 +1,4 @@
 www.twitter.com A DENY
+www.uga.edu A ALLOWED
+www.uga.edu A ALLOWED
+www.instagram.com A DENY

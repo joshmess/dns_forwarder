@@ -69,21 +69,24 @@ def dohHandler(data, address, socket, doh_host, deny_list):
             socket.sendto(bytes(deny_pkt), address)
             return
 
-    class HTTPSConnection(http.client.HTTPConnection):
-        def connect(self) -> None:
-            self.sock = socket.create_connection((doh_host,TCP_PORT))
+    
+    #class HTTPSConnection(http.client.HTTPConnection):
+    #    def connect(self) -> None:
+    #    self.sock = socket.connect((doh_host,TCP_PORT))            
+    
+    #class HTTPSHandler(urllib.request.HTTPSHandler):
+    #     def https_open(self,req):
+    #     return self.do_open(HTTPSConnection, req)
 
-    class HTTPSHandler(http.client.HTTPConnection):
-        def https_open(self,req):
-            return self.do_open(HTTPSConnection, req)
+    
+    #opener = urllib.request.build_opener(HTTPSHandler)
+    
+    #urllib.request.install_opener(opener)
 
-    opener = urllib.request.build_opener(HTTPSHandler)
-    urllib.request.install_opener(opener)
-
-    url = 'https://' + qname_str
-    request = urllib.request.urlopen(url)
-    resp = request.read()
-    socket.sendto(resp)
+    #url = 'https://' + qname_str
+    #request = urllib.request.urlopen(url)
+    #resp = request.read()
+    #socket.sendto(resp)
 
 # New thread to handle UDP request to be sent to DNS server (-d)
 def dnsHandler(data, address, socket, dns_ip, deny_list):
@@ -178,7 +181,7 @@ if __name__ == '__main__':
         try:
             # UDP DNS  setup
             udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_client_sock.connect(('', UDP_PORT))
+            udp_client_sock.bind(('', UDP_PORT))
             while True:
                 data, address = udp_client_sock.recvfrom(1024)
                 _thread.start_new_thread(dohHandler(data, address, udp_client_sock, doh_host, blocked_domains))
