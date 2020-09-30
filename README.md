@@ -15,11 +15,10 @@ dig @your_ip_address example_domain_name
 ```
 
 ### Questions:
-- when testing, will dig provide an IP 
-- changing id of packets
+- successfully match id of packets when sending back to client
 ### Outstanding Issues:
-- send back NXDOMAIN message
-- implement DoH using urllib (TCP?)
+- finish sending back NXDOMAIN message (id)
+- finish implementing DoH using urllib
 
 
 
