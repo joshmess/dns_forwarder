@@ -190,9 +190,10 @@ if __name__ == '__main__':
         try:
             # UDP DNS  setup
             udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_client_sock.connect(('', UDP_PORT))
+            udp_client_sock.bind(('', UDP_PORT))
             while True:
                 data, address = udp_client_sock.recvfrom(1024)
+                print('starting thread')
                 _thread.start_new_thread(dohHandler(data, address, udp_client_sock, doh_host, blocked_domains))
         except Exception as e:
             print(e)

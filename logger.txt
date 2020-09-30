@@ -1,4 +1,7 @@
+www.nike.com A ALLOWED
+www.adidas.com A ALLOWED
+www.underarmour.com A ALLOWED
+www.twitter.com A DENY
 www.twitter.com A DENY
 www.uga.edu A ALLOWED
 www.uga.edu A ALLOWED
-www.instagram.com A DENY

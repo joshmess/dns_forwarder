@@ -17,6 +17,7 @@ dig @your_ip_address example_domain_name
 ### Questions:
 - successfully match id of packets when sending back to client
 - sudo systemctl stop systemd-resolved before running
+- remote end closed connection without response
 
 ### Outstanding Issues:
 - finish sending back NXDOMAIN message (match txIDs)
