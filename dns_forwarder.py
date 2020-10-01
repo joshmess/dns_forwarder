@@ -35,6 +35,7 @@ def dohHandler(data, address, csocket, doh_host, deny_list):
     qid = dns_req[DNS].id
     print('id:', qid)
     qname = dns_req[DNSQR].qname
+    orig_qname = qname
     qname_str = qname.decode()
     qname_str = qname_str[:-1]
     qname = qname_str.encode()
@@ -63,11 +64,12 @@ def dohHandler(data, address, csocket, doh_host, deny_list):
                 logf.write(' ')
                 logf.write(query_type)
                 logf.write(' DENY\n')
-            nxd = DNS(id=qid, rcode=3, qd=DNSQR(data))
-            resp_pkt = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / nxd
+            nxd = DNS(id=qid, rcode=3, qd=DNSQR(qtype=qtype,qname=orig_qname))
+            resp_pkt = IP(dst=doh_host) / UDP(dport=UDP_PORT) / nxd
             print('nid:', resp_pkt[DNS].id)
             csocket.sendto(bytes(resp_pkt), address)
             return
+
 
     # Log if necessary
     if logging:
@@ -78,12 +80,9 @@ def dohHandler(data, address, csocket, doh_host, deny_list):
         logf.write(' ALLOWED\n')
 
 
-    req = urllib.request.Request
-    url = 'https://' + qname_str
+    url = 'https://' + qname
     req = urllib.request.Request(url)
-    req.add_header('Referer', doh_host)
-    # Customize the default User-Agent header value:
-    req.add_header('User-Agent', 'urllib-example/0.1 (Contact: . . .)')
+    req.add_header('Referer',doh_host)
     r = urllib.request.urlopen(req)
     resp = req.read()
     csocket.sendto(resp,address)
@@ -125,10 +124,9 @@ def dnsHandler(data, address, csocket, dns_ip, deny_list):
                 logf.write(' ')
                 logf.write(query_type)
                 logf.write(' DENY\n')
-            nxd = DNS(id=qid,rcode=3,qd=DNSQR(data))
+            nxd = DNS(id=qid,rd=1,rcode=3,qd=DNSQR(qname=orig_qname,qtype=qtype))
             resp_pkt = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / nxd
-            print('nid:', resp_pkt[DNS].id)
-
+            print('nid:', resp_pkt[DNS].id) 
             csocket.sendto(bytes(resp_pkt), address)
             return
 
