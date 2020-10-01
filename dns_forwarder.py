@@ -123,9 +123,7 @@ def dnsHandler(data, address, csocket, dns_ip, deny_list):
         logf.write(' ')
         logf.write(query_type)
         logf.write(' ALLOWED\n')
-    print('')
     # send back to client
-    print('sending response to client...')
     csocket.sendto(udp_response, address)
 
 
@@ -172,7 +170,7 @@ if __name__ == '__main__':
             udp_client_sock.close()
     elif args.doh:
         # DoH-capable server specified but not provided --> send to default DoH Server
-        doh_host = 'dns.google'
+        doh_host = '8.8.8.8'
         try:
             # UDP DNS query setup
             udp_client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
