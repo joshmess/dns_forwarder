@@ -4,7 +4,7 @@ from scapy.all import DNS, DNSQR, IP, UDP
 from scapy.layers.dns import DNSQR
 import urllib.request
 import socket
-import http.client
+
 
 
 
@@ -16,7 +16,7 @@ import http.client
 
 
 UDP_PORT = 53
-TCP_PORT = 443
+HTTPS_PORT = 80
 
 
 # Send a UDP query to the DNS server
@@ -63,12 +63,10 @@ def dohHandler(data, address, csocket, doh_host, deny_list):
                 logf.write(' ')
                 logf.write(query_type)
                 logf.write(' DENY\n')
-            deny_pkt = IP(dst=doh_host) / UDP(dport=UDP_PORT) / DNS(data)
-            deny_pkt[DNS].rcode = 3
-            deny_pkt[DNS].id = qid
-            print('nid:', deny_pkt[DNS].id)
-
-            csocket.sendto(bytes(deny_pkt), address)
+            nxd = DNS(id=qid, rcode=3, qd=DNSQR(data))
+            resp_pkt = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / nxd
+            print('nid:', resp_pkt[DNS].id)
+            csocket.sendto(bytes(resp_pkt), address)
             return
 
     # Log if necessary
@@ -79,21 +77,15 @@ def dohHandler(data, address, csocket, doh_host, deny_list):
         logf.write(query_type)
         logf.write(' ALLOWED\n')
 
-    # Open url and send data back to client
-    class HTTPSConnection(http.client.HTTPSConnection):
-        def connect(self) -> None:
-            self.sock = socket.create_connection((doh_host, TCP_PORT))
 
-    class HTTPSHandler(urllib.request.HTTPSHandler):
-        def https_open(self, req):
-            return self.do_open(HTTPSConnection, req)
-
-    opener = urllib.request.build_opener(HTTPSHandler)
-    urllib.request.install_opener(opener)
-
+    req = urllib.request.Request
     url = 'https://' + qname_str
-    request = urllib.request.urlopen(url)
-    resp = request.read()
+    req = urllib.request.Request(url)
+    req.add_header('Referer', doh_host)
+    # Customize the default User-Agent header value:
+    req.add_header('User-Agent', 'urllib-example/0.1 (Contact: . . .)')
+    r = urllib.request.urlopen(req)
+    resp = req.read()
     csocket.sendto(resp,address)
 
 
@@ -104,6 +96,7 @@ def dnsHandler(data, address, csocket, dns_ip, deny_list):
     qid = dns_req[DNS].id
     print('id:', qid)
     qname = dns_req[DNSQR].qname
+    orig_qname = qname
     qname_str = qname.decode()
     qname_str = qname_str[:-1]
     qname = qname_str.encode()
@@ -132,12 +125,11 @@ def dnsHandler(data, address, csocket, dns_ip, deny_list):
                 logf.write(' ')
                 logf.write(query_type)
                 logf.write(' DENY\n')
-            deny_pkt = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / DNS(data)
-            deny_pkt[DNS].rcode = 3
-            deny_pkt[DNS].id = qid
-            print('nid:', deny_pkt[DNS].id)
+            nxd = DNS(id=qid,rcode=3,qd=DNSQR(data))
+            resp_pkt = IP(dst=dns_ip) / UDP(dport=UDP_PORT) / nxd
+            print('nid:', resp_pkt[DNS].id)
 
-            csocket.sendto(bytes(deny_pkt), address)
+            csocket.sendto(bytes(resp_pkt), address)
             return
 
     # Send UDP query to upstream DNS resolver
