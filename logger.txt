@@ -1,7 +1,0 @@
-www.uga.edu A ALLOWED
-www.twitter.com A DENY
-www.twitter.com A DENY
-www.github.com A ALLOWED
-www.youtube.com A DENY
-www.youtube.com A DENY
-www.github.com A ALLOWED
