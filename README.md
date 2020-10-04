@@ -14,14 +14,9 @@ Test the server:
 dig @your_ip_address example_domain_name
 ```
 
-### Questions:
-- successfully match id of packets when sending back to client
-- 'Err: remote end closed connection without response'
-- '$sudo systemctl stop systemd-resolved' before running
+### Note:
 
-### Outstanding Issues:
-- finish sending back NXDOMAIN message (match txIDs)
-- finish implementing DoH using urllib
+- '$sudo systemctl stop systemd-resolved' before running
 
 
 
