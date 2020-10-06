@@ -6,12 +6,17 @@ This project uses Python to build a simple DNS forwarder with domain blocking an
 
 ### Run the server:
 ```
-python3 dns_forwarder.py [-h] -f DENY_LIST_FILE [-d DST_IP] [-l LOG_FILE] [--doh] [--doh_server DOH_SERVER]
+$ python3 dns_forwarder.py [-h] -f DENY_LIST_FILE [-d DST_IP] [-l LOG_FILE] [--doh] [--doh_server DOH_SERVER]
 ```
 
 ### Test the server:
 ```
-dig @your_ip_address example_domain_name
+$ dig @your_ip_address example_domain_name
+```
+
+### Note:
+```
+$ sudo systemctl stop systemd-resolved
 ```
 
 
