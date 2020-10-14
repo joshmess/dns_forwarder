@@ -41,7 +41,7 @@ def dohHandler(data, address, csocket, doh_host, deny_list):
     if qtype == 2:
         query_type = 'NS'
     if qtype == 15:
-        query_type == 'MX'
+        query_type = 'MX'
 
     # Check if domain name should be blocked, log if needed
     for domain in deny_list:
@@ -96,7 +96,7 @@ def dnsHandler(data, address, csocket, dns_ip, deny_list):
     if qtype == 2:
         query_type = 'NS'
     if qtype == 15:
-        query_type == 'MX'
+        query_type = 'MX'
 
     # Check if domain name should be blocked, log if needed
     for domain in deny_list:
